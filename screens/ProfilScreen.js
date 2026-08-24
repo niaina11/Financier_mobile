@@ -1,20 +1,58 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
+import { useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
 
-const infos = [
-  { label: 'Email', value: 'pierre@agence3.mg' },
-  { label: 'Téléphone', value: '+261 34 00 000 00' },
-  { label: 'Rôle', value: "Agent d'Agence" },
-  { label: 'Statut', value: 'Actif ✅' },
-];
-
 const menuItems = [
-  { label: 'Changer mot de passe', emoji: '🔑' },
   { label: 'Notifications', emoji: '🔔' },
   { label: 'Aide & Support', emoji: '❓' },
 ];
 
-export default function ProfilScreen() {
+export default function ProfilScreen({onLogout}) {
+  const [email, setEmail] = useState('');
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [agence, setAgence] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const infos = [
+  { label: 'Email', value: email },
+  { label: 'Téléphone', value: telephone },
+  { label: 'Rôle', value: "Agent d'Agence" },
+  { label: 'Statut', value: 'Actif ✅' },
+];
+
+  const chargerUSer = async () => {
+    try {
+      const storedEmail = await AsyncStorage.getItem('email');
+      const storedNom = await AsyncStorage.getItem('nom');
+      const storedPrenom = await AsyncStorage.getItem('prenom');
+      const storedAgence = await AsyncStorage.getItem('nom_agence');
+      const storedTelephone = await AsyncStorage.getItem('telephone');
+      if (storedEmail) {
+        setEmail(storedEmail);
+      }
+      if (storedNom) {
+        setNom(storedNom);
+      }
+      if (storedPrenom) {
+        setPrenom(storedPrenom);
+      }
+      if (storedAgence) {
+        setAgence(storedAgence);
+      }
+      if (storedTelephone) {
+        setTelephone(storedTelephone);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des informations de l'utilisateur :", error);
+    }
+  };
+
+  useEffect(() => {
+    chargerUSer();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -24,9 +62,9 @@ export default function ProfilScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarEmoji}>👤</Text>
           </View>
-          <Text style={styles.profileName}>Pierre Rakoto</Text>
+          <Text style={styles.profileName}>{prenom} {nom}</Text>
           <Text style={styles.profileRole}>Agent d'Agence</Text>
-          <Text style={styles.profileAgence}>🏢 Agence 3 — Antananarivo</Text>
+          <Text style={styles.profileAgence}>🏢 {agence}</Text>
         </View>
 
         <View style={styles.infoCard}>
@@ -50,7 +88,7 @@ export default function ProfilScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.logoutBtn}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutEmoji}>🚪</Text>
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>

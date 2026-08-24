@@ -3,10 +3,59 @@ import {
   View, Text, TextInput, TouchableOpacity,
   SafeAreaView, KeyboardAvoidingView, Platform, StyleSheet
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen({ onLogin, onInscription }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [erreor, setError] = useState(null);
+  const [isLoading, setIsLoadign] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+    setIsLoadign(true);
+    setError(null);
+    try {
+      const response = await fetch('http://192.168.50.243:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          mot_de_passe: password
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erreur lors de login');
+      }
+
+      await AsyncStorage.setItem('token', result.data.token);
+      await AsyncStorage.setItem('id_utilisateur', result.data.id_utilisateur.toString());
+      await AsyncStorage.setItem('nom', result.data.nom);
+      await AsyncStorage.setItem('prenom', result.data.prenom);
+      await AsyncStorage.setItem('role', result.data.role);
+      await AsyncStorage.setItem('id_agence', result.data.id_agence.toString());
+      await AsyncStorage.setItem('nom_agence', result.data.nom_agence || '');
+      await AsyncStorage.setItem('email', email);
+      await AsyncStorage.setItem('telephone', result.data.telephone || '');
+      const id = await AsyncStorage.getItem('nom');
+      const prenom = await AsyncStorage.getItem('prenom');
+      alert(`${id} ${prenom}`);
+      onLogin();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoadign(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -44,8 +93,13 @@ export default function LoginScreen({ onLogin, onInscription }) {
               style={styles.input}
             />
           </View>
+          {erreor && (
+            <Text style={{ color: 'red', marginBottom: 10 }}>
+              {erreor}
+            </Text>
+          )}
           <TouchableOpacity
-            onPress={() => { if (email && password) onLogin(); }}
+            onPress={handleLogin}
             style={styles.button}
           >
             <Text style={styles.buttonText}>Se connecter</Text>

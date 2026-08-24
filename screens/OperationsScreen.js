@@ -1,38 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal,
   TextInput, SafeAreaView, StyleSheet, Alert
 } from 'react-native';
-
-const initialOps = [
-  { id: 1, ref: 'OP-2024-018', type: 'Recette', montant: 1200000, desc: 'Dépôt client', date: '08/06/2024', statut: 'VALIDE' },
-  { id: 2, ref: 'OP-2024-017', type: 'Dépense', montant: 850000, desc: 'Charges locatives', date: '08/06/2024', statut: 'VALIDE' },
-  { id: 3, ref: 'OP-2024-016', type: 'Recette', montant: 3500000, desc: 'Remboursement', date: '07/06/2024', statut: 'EN_ATTENTE' },
-  { id: 4, ref: 'OP-2024-015', type: 'Dépense', montant: 200000, desc: 'Fournitures', date: '07/06/2024', statut: 'VALIDE' },
-];
+import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function OperationsScreen() {
-  const [ops, setOps] = useState(initialOps);
+  const [ops, setOps] = useState([]);
   const [modalAjout, setModalAjout] = useState(false);
   const [modalModif, setModalModif] = useState(false);
   const [modalFacture, setModalFacture] = useState(false);
   const [selectedOp, setSelectedOp] = useState(null);
-  const [type, setType] = useState('Recette');
+  const [type, setType] = useState('DECAISSEMENT');
   const [montant, setMontant] = useState('');
   const [description, setDescription] = useState('');
+  const [nomClient, setNomClient] = useState('');
+  const [prenomClient, setPrenomClient] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [show, setShow] = useState(false);
+  const [numero, setNumero] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleAjouter = () => {
-    if (!montant || !description) return;
-    const newOp = {
-      id: ops.length + 1,
-      ref: `OP-2024-0${ops.length + 20}`,
-      type, montant: parseInt(montant),
-      desc: description,
-      date: new Date().toLocaleDateString('fr-FR'),
-      statut: 'EN_ATTENTE',
-    };
-    setOps([newOp, ...ops]);
-    setMontant(''); setDescription(''); setModalAjout(false);
+  const onChange = (event, selectedDate) => {
+    setShow(false);
+
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
+
+  const handleAjouter = async () => {
+    if (!montant || !description || !nomClient || !numero) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch('http://192.168.50.243:3000/api/agence/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type_operation: type,
+          montant: parseInt(montant),
+          description: description,
+          nom_client: nomClient,
+          prenom_client: prenomClient,
+          numero_client: numero,
+          date_operation: date.toISOString()
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erreur lors de l\'ajout de l\'opération');
+      }
+
+      setOps([result.data, ...ops]);
+      setMontant('');
+      setDescription('');
+      setNomClient('');
+      setNumero('');
+      setPrenomClient('');
+      setModalAjout(false);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleModifier = () => {
@@ -74,6 +117,31 @@ export default function OperationsScreen() {
     setModalFacture(true);
   };
 
+  const fetchOperations = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch('http://192.168.50.243:3000/api/agence/operations', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erreur lors de la récupération des opérations');
+      }
+
+      setOps(result.data);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+  useEffect(() => {
+    fetchOperations();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
@@ -84,25 +152,25 @@ export default function OperationsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        {
+          error && (
+            <Text style={{ color: 'red', marginBottom: 10 }}>
+              {error.Error || error.message || 'Une erreur est survenue'}
+            </Text>)
+        }
         {ops.map((op) => (
-          <View key={op.id} style={styles.opCard}>
+          <View key={op.id_operation} style={styles.opCard}>
             <View style={styles.opRow}>
-              <Text style={[styles.opType, { color: op.type === 'Recette' ? '#27ae60' : '#e74c3c' }]}>
-                {op.type}
+              <Text style={[styles.opType, { color: op.type_operation === 'Recette' ? '#27ae60' : '#e74c3c' }]}>
+                {op.type_operation}
               </Text>
-              <Text style={[styles.opMontant, { color: op.type === 'Recette' ? '#27ae60' : '#e74c3c' }]}>
-                {op.type === 'Recette' ? '+' : '-'}{op.montant.toLocaleString()} Ar
+              <Text style={[styles.opMontant, { color: op.type_operation === 'ENCAISSEMENT' ? '#27ae60' : '#e74c3c' }]}>
+                {op.type_operation === 'ENCAISSEMENT' ? '+' : '-'}{op.montant.toLocaleString()} Ar
               </Text>
             </View>
-            <Text style={styles.opDesc}>{op.desc}</Text>
+            <Text style={styles.opDesc}>{op.description}</Text>
             <View style={styles.opRow}>
-              <Text style={styles.opRef}>{op.ref} — {op.date}</Text>
-              <Text style={[styles.opStatut, {
-                color: op.statut === 'VALIDE' ? '#27ae60'
-                  : op.statut === 'SUPPRESSION_DEMANDÉE' ? '#e74c3c' : '#f39c12'
-              }]}>
-                {op.statut}
-              </Text>
+              <Text style={styles.opRef}>{op.id_operation} — {op.date_operation}</Text>
             </View>
 
             {/* Actions */}
@@ -133,17 +201,22 @@ export default function OperationsScreen() {
                 <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
+            {error && (
+              <Text style={{ color: 'red', marginBottom: 10 }}>
+                {error}
+              </Text>
+            )}
             <Text style={styles.fieldLabel}>Type</Text>
             <View style={styles.typeRow}>
-              {['Recette', 'Dépense'].map((t) => (
+              {['DECAISSEMENT', 'ENCAISSEMENT', 'TRANSFERT'].map((t) => (
                 <TouchableOpacity
                   key={t} onPress={() => setType(t)}
                   style={[styles.typeBtn, type === t && {
-                    backgroundColor: t === 'Recette' ? '#dcfce7' : '#fee2e2',
-                    borderColor: t === 'Recette' ? '#27ae60' : '#e74c3c',
+                    backgroundColor: t === 'DECAISSEMENT' ? '#dcfce7' : '#fee2e2',
+                    borderColor: t === 'DECAISSEMENT' ? '#27ae60' : '#e74c3c',
                   }]}
                 >
-                  <Text style={[styles.typeBtnText, { color: type === t ? (t === 'Recette' ? '#27ae60' : '#e74c3c') : '#94a3b8' }]}>
+                  <Text style={[styles.typeBtnText, { color: type === t ? (t === 'DECAISSEMENT' ? '#27ae60' : '#e74c3c') : '#94a3b8' }]}>
                     {t}
                   </Text>
                 </TouchableOpacity>
@@ -151,6 +224,28 @@ export default function OperationsScreen() {
             </View>
             <Text style={styles.fieldLabel}>Montant (Ar)</Text>
             <TextInput value={montant} onChangeText={setMontant} placeholder="Ex: 1500000" keyboardType="numeric" style={styles.textInput} />
+            <Text style={styles.fieldLabel}>Nom Client </Text>
+            <TextInput value={nomClient} onChangeText={setNomClient} placeholder="Ex: Jean" style={styles.textInput} />
+            <Text style={styles.fieldLabel}>Prénom Client </Text>
+            <TextInput value={prenomClient} onChangeText={setPrenomClient} placeholder="Ex: Dupont" style={styles.textInput} />
+            <Text style={styles.fieldLabel}>Numéro Téléphone</Text>
+            <TextInput value={numero} onChangeText={setNumero} placeholder="Ex: 0340010001" keyboardType="numeric" style={styles.textInput} />
+            <Text style={styles.fieldLabel}>Date</Text>
+            <TouchableOpacity
+              onPress={() => setShow(true)}
+              style={styles.textInput}
+            >
+              <Text>{date.toLocaleDateString('fr-FR')}</Text>
+            </TouchableOpacity>
+
+            {show && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                onChange={onChange}
+              />
+            )}
             <Text style={styles.fieldLabel}>Description</Text>
             <TextInput value={description} onChangeText={setDescription} placeholder="Motif..." multiline style={[styles.textInput, styles.textArea]} />
             <TouchableOpacity onPress={handleAjouter} style={styles.saveBtn}>

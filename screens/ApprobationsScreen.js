@@ -3,13 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   SafeAreaView, StyleSheet, Modal, TextInput
 } from 'react-native';
-
-const initialDemandes = [
-  { id: 1, type: 'SUPPRESSION', ref: 'OP-2024-022', agence: 'Agence 3', agent: 'Pierre Rakoto', montant: 850000, motif: 'Erreur de saisie', date: '08/06/2024 10:15', statut: 'EN_ATTENTE' },
-  { id: 2, type: 'MODIFICATION', ref: 'OP-2024-015', agence: 'Agence 3', agent: 'Pierre Rakoto', montant: 1200000, motif: 'Mise à jour montant', date: '08/06/2024 09:30', statut: 'EN_ATTENTE' },
-  { id: 3, type: 'INSCRIPTION', ref: 'USR-2024-005', agence: 'Agence 5', agent: 'Marie Solo', montant: 0, motif: 'Nouveau agent', date: '07/06/2024 14:00', statut: 'APPROUVÉE' },
-  { id: 4, type: 'SUPPRESSION', ref: 'OP-2024-010', agence: 'Agence 3', agent: 'Pierre Rakoto', montant: 300000, motif: 'Doublon', date: '07/06/2024 11:00', statut: 'REJETÉE' },
-];
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
 const typeStyles = {
   SUPPRESSION: { bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', emoji: '🗑️' },
@@ -19,40 +15,88 @@ const typeStyles = {
 
 const statutStyles = {
   EN_ATTENTE: { bg: '#fef3c7', text: '#92400e' },
-  APPROUVÉE: { bg: '#dcfce7', text: '#166534' },
-  REJETÉE: { bg: '#fee2e2', text: '#991b1b' },
+  VALIDEE: { bg: '#dcfce7', text: '#166534' },
+  REFUSEE: { bg: '#fee2e2', text: '#991b1b' },
 };
 
 export default function ApprobationsScreen() {
-  const [demandes, setDemandes] = useState(initialDemandes);
   const [filter, setFilter] = useState('TOUS');
+  const [montant, setMontant] = useState('');
+  const [motif, setMotif] = useState('');
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [idAgence, setIdAgence] = useState('');
+  const [idAgent, setIdAgent] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [newDemande, setNewDemande] = useState({ type: 'SUPPRESSION', ref: '', motif: '' });
+  const [allDemandes, setAllDemandes] = useState([]);
 
-  const filters = ['TOUS', 'EN_ATTENTE', 'APPROUVÉE', 'REJETÉE'];
-  const filtered = filter === 'TOUS' ? demandes : demandes.filter(d => d.statut === filter);
+  const filters = ['TOUS', 'EN_ATTENTE', 'VALIDEE', 'REJETÉE'];
+  const filtered = filter === 'TOUS' ? allDemandes : allDemandes.filter(d => d.statut === filter);
 
-  const handleNouvelleDemandeSubmit = () => {
-    const d = {
-      id: demandes.length + 1,
-      type: newDemande.type,
-      ref: newDemande.ref || `OP-2024-0${demandes.length + 30}`,
-      agence: 'Agence 3',
-      agent: 'Pierre Rakoto',
-      montant: 0,
-      motif: newDemande.motif,
-      date: new Date().toLocaleDateString('fr-FR'),
-      statut: 'EN_ATTENTE',
-    };
-    setDemandes([d, ...demandes]);
-    setModalVisible(false);
-    setNewDemande({ type: 'SUPPRESSION', ref: '', motif: '' });
+  const handleNouvelleDemandeSubmit = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      if (!montant || !motif) {
+        setError("Veuillez remplir tous les champs.");
+        return;
+      }
+      setIdAgence(await AsyncStorage.getItem('id_agence')); // Remplacez par l'ID réel de l'agence connectée
+      setIdAgent(await AsyncStorage.getItem('id_utilisateur'));
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch('http://192.168.50.243:3000/api/agence/demandes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          montant_demande: montant,
+          description: motif,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erreur lors de la soumission de la demande');
+      }
+      setMontant('');
+      setMotif('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const fetchDemandes = async () => {
+    try{
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch('http://192.168.50.243:3000/api/agence/demandes', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await response.json();
+      console.log("Réponse fetchDemandes :", result);
+      if (!response.ok) {
+        throw new Error(result.message || "Erreur lors du chargement des demandes");
+      }
+      setAllDemandes(result.data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchDemandes();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.subtitle}>{demandes.filter(d => d.statut === 'EN_ATTENTE').length} en attente</Text>
+        <Text style={styles.subtitle}>{allDemandes.filter(d => d.statut === 'EN_ATTENTE').length} en attente</Text>
         <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addBtn}>
           <Text style={styles.addBtnText}>+ Demande</Text>
         </TouchableOpacity>
@@ -73,27 +117,25 @@ export default function ApprobationsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {filtered.map((d) => {
-          const ts = typeStyles[d.type];
           const ss = statutStyles[d.statut];
           return (
-            <View key={d.id} style={[styles.card, { backgroundColor: ts.bg, borderColor: ts.border }]}>
+            <View key={d.id_demande} style={[styles.card]}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardEmoji}>{ts.emoji}</Text>
+                <Text style={styles.cardEmoji}><Ionicons name="document-text-outline" size={24} color="#1a3a5c" /></Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardType, { color: ts.text }]}>{d.type}</Text>
-                  <Text style={styles.cardRef}>{d.ref}</Text>
+                  <Text style={[styles.cardType]}>{d.description}</Text>
+                  <Text style={styles.cardRef}>{d.id_demande}</Text>
                 </View>
                 <View style={[styles.statutBadge, { backgroundColor: ss.bg }]}>
                   <Text style={[styles.statutText, { color: ss.text }]}>{d.statut}</Text>
                 </View>
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardDetail}>👤 {d.agent} — {d.agence}</Text>
-                <Text style={styles.cardDetail}>💬 {d.motif}</Text>
-                {d.montant > 0 && (
-                  <Text style={styles.cardDetail}>💰 {d.montant.toLocaleString()} Ar</Text>
+                <Text style={styles.cardDetail}>👤 {d.agent?.prenom} {d.agent?.nom} — {d.agence?.nom}</Text>
+                {d.montant_demande > 0 && (
+                  <Text style={styles.cardDetail}>💰 {d.montant_demande.toLocaleString()} Ar</Text>
                 )}
-                <Text style={styles.cardDate}>📅 {d.date}</Text>
+                <Text style={styles.cardDate}>📅 {new Date(d.date_demande).toLocaleDateString()}</Text>
               </View>
             </View>
           );
@@ -111,7 +153,7 @@ export default function ApprobationsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.fieldLabel}>Type de demande</Text>
+            {/* <Text style={styles.fieldLabel}>Type de demande</Text>
             <View style={styles.typeGrid}>
               {['SUPPRESSION', 'MODIFICATION', 'AUTRE'].map((t) => (
                 <TouchableOpacity
@@ -124,20 +166,20 @@ export default function ApprobationsScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </View> */}
 
-            <Text style={styles.fieldLabel}>Référence opération</Text>
+            <Text style={styles.fieldLabel}>Montant demandé</Text>
             <TextInput
-              value={newDemande.ref}
-              onChangeText={(v) => setNewDemande({ ...newDemande, ref: v })}
-              placeholder="Ex: OP-2024-018"
+              value={montant}
+              onChangeText={(v) => setMontant(v)}
+              placeholder="Ex: 200000 Ar"
               style={styles.textInput}
             />
 
             <Text style={styles.fieldLabel}>Motif</Text>
             <TextInput
-              value={newDemande.motif}
-              onChangeText={(v) => setNewDemande({ ...newDemande, motif: v })}
+              value={motif}
+              onChangeText={(v) => setMotif(v)}
               placeholder="Expliquez la raison de votre demande..."
               multiline
               style={[styles.textInput, styles.textArea]}
@@ -146,6 +188,7 @@ export default function ApprobationsScreen() {
             <TouchableOpacity onPress={handleNouvelleDemandeSubmit} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>Envoyer la demande</Text>
             </TouchableOpacity>
+            {error && <Text style={{ color: 'red', marginTop: 10 }}>{error}</Text>}
           </View>
         </View>
       </Modal>
@@ -160,7 +203,7 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
   addBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
   filterScroll: { paddingHorizontal: 16, marginBottom: 8, maxHeight: 48 },
-  filterBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: 'white', marginRight: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 14, borderRadius: 20, backgroundColor: 'white', marginRight: 8, borderWidth: 1, borderColor: '#e2e8f0'},
   filterBtnActive: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   filterText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
   filterTextActive: { color: 'white' },

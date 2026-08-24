@@ -1,15 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
+import { useEffect } from 'react';
+import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   SafeAreaView, StyleSheet
 } from 'react-native';
-
-const actions = [
-  { label: 'Ajouter Recette', emoji: '➕', bg: '#dcfce7' },
-  { label: 'Ajouter Dépense', emoji: '➖', bg: '#fee2e2' },
-  { label: 'Voir Historique', emoji: '📊', bg: '#dbeafe' },
-  { label: 'Alertes', emoji: '🔔', bg: '#fef3c7' },
-];
 
 const dernieresOps = [
   { ref: 'OP-2024-018', type: 'Recette', montant: '+1 200 000 Ar', date: "Aujourd'hui 09:30", color: '#27ae60' },
@@ -18,43 +14,105 @@ const dernieresOps = [
 ];
 
 export default function AccueilScreen() {
+
+  const [prenom, setPrenom] = useState('');
+  const [agence, setAgence] = useState('');
+  const [recette, setRecette] = useState(0);
+  const [depense, setDepense] = useState(0);
+  const [solde, setSolde]= useState(0);
+
+  const chargerUser = async () => {
+    try {
+      const storedPrenom = await AsyncStorage.getItem('prenom');
+      const storedAgence = await AsyncStorage.getItem('nom_agence');
+      if (storedPrenom) {
+        setPrenom(storedPrenom);
+      }
+      if (storedAgence) {
+        setAgence(storedAgence);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du prénom de l'utilisateur :", error);
+    }
+  };
+  const fetchStats = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+
+      console.log("TOKEN :", token);
+
+      const [depenses, recettes, soldes] = await Promise.all([
+        fetch('http://192.168.50.243:3000/api/agence/getDepense', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+
+        fetch('http://192.168.50.243:3000/api/agence/getRecette', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+        fetch('http://192.168.50.243:3000/api/agence/getSolde', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      const depenseText = await depenses.text();
+      const recetteText = await recettes.text();
+      const soldeText = await soldes.text();
+
+      const depenseData = JSON.parse(depenseText);
+      const recetteData = JSON.parse(recetteText);
+      const soldeData = JSON.parse(soldeText);
+
+      setDepense(depenseData.data.depense || 0);
+      setRecette(recetteData.data.recette || 0);
+      setSolde(soldeData.data.solde || 0); 
+
+    } catch (err) {
+      console.error(
+        "Erreur lors de la récupération des statistiques :",
+        err
+      );
+    }
+  };
+  useEffect(() => {
+    chargerUser();
+    fetchStats();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.welcome}>BIENVENUE</Text>
-          <Text style={styles.name}>Agent Pierre</Text>
-          <Text style={styles.agence}>Agence 3 — Antananarivo</Text>
+          <Text style={styles.name}>{prenom}</Text>
+          <Text style={styles.agence}>Agence: {agence}</Text>
         </View>
 
         {/* Carte Solde */}
         <View style={styles.soldeCard}>
           <Text style={styles.soldeLabel}>SOLDE DE L'AGENCE</Text>
-          <Text style={styles.soldeValue}>12 450 000 Ar</Text>
+          <Text style={styles.soldeValue}>{solde} Ar</Text>
           <View style={styles.soldeRow}>
             <View>
               <Text style={styles.soldeSubLabel}>Recettes ce mois</Text>
-              <Text style={styles.recette}>+8 200 000 Ar</Text>
+              <Text style={styles.recette}>{recette} Ar</Text>
             </View>
             <View>
               <Text style={styles.soldeSubLabel}>Dépenses ce mois</Text>
-              <Text style={styles.depense}>-3 800 000 Ar</Text>
+              <Text style={styles.depense}>-{depense} Ar</Text>
             </View>
           </View>
-        </View>
-
-        {/* Actions rapides */}
-        <Text style={styles.sectionTitle}>Actions Rapides</Text>
-        <View style={styles.actionsGrid}>
-          {actions.map(({ label, emoji, bg }) => (
-            <TouchableOpacity key={label} style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: bg }]}>
-                <Text style={styles.actionEmoji}>{emoji}</Text>
-              </View>
-              <Text style={styles.actionLabel}>{label}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         {/* Dernières opérations */}
