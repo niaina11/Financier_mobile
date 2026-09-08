@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { url } from '../utils/api';
 
 const typeStyles = {
   SUPPRESSION: { bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', emoji: '🗑️' },
@@ -44,7 +45,7 @@ export default function ApprobationsScreen() {
       setIdAgence(await AsyncStorage.getItem('id_agence')); // Remplacez par l'ID réel de l'agence connectée
       setIdAgent(await AsyncStorage.getItem('id_utilisateur'));
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch('http://192.168.50.243:3000/api/agence/demandes', {
+      const response = await fetch(`${url}/api/agence/demandes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ export default function ApprobationsScreen() {
   const fetchDemandes = async () => {
     try{
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch('http://192.168.50.243:3000/api/agence/demandes', {
+      const response = await fetch(`${url}/api/agence/demandes`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`

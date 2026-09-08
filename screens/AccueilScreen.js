@@ -6,6 +6,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   SafeAreaView, StyleSheet
 } from 'react-native';
+import { url } from '../utils/api';
 
 const dernieresOps = [
   { ref: 'OP-2024-018', type: 'Recette', montant: '+1 200 000 Ar', date: "Aujourd'hui 09:30", color: '#27ae60' },
@@ -42,7 +43,7 @@ export default function AccueilScreen() {
       console.log("TOKEN :", token);
 
       const [depenses, recettes, soldes] = await Promise.all([
-        fetch('http://192.168.50.243:3000/api/agence/getDepense', {
+        fetch(`${url}/api/agence/getDepense`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -50,14 +51,14 @@ export default function AccueilScreen() {
           },
         }),
 
-        fetch('http://192.168.50.243:3000/api/agence/getRecette', {
+        fetch(`${url}/api/agence/getRecette`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
         }),
-        fetch('http://192.168.50.243:3000/api/agence/getSolde', {
+        fetch(`${url}/api/agence/getSolde`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',

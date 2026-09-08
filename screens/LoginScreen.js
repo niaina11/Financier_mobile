@@ -4,6 +4,7 @@ import {
   SafeAreaView, KeyboardAvoidingView, Platform, StyleSheet
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {url} from '../utils/api';
 
 export default function LoginScreen({ onLogin, onInscription }) {
   const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ export default function LoginScreen({ onLogin, onInscription }) {
     setIsLoadign(true);
     setError(null);
     try {
-      const response = await fetch('http://192.168.50.243:3000/api/auth/login', {
+      const response = await fetch(`${url}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,6 +33,7 @@ export default function LoginScreen({ onLogin, onInscription }) {
       });
 
       const result = await response.json();
+      console.log("LOGIN RESPONSE:", result);
 
       if (!response.ok) {
         throw new Error(result.message || 'Erreur lors de login');
@@ -46,9 +48,6 @@ export default function LoginScreen({ onLogin, onInscription }) {
       await AsyncStorage.setItem('nom_agence', result.data.nom_agence || '');
       await AsyncStorage.setItem('email', email);
       await AsyncStorage.setItem('telephone', result.data.telephone || '');
-      const id = await AsyncStorage.getItem('nom');
-      const prenom = await AsyncStorage.getItem('prenom');
-      alert(`${id} ${prenom}`);
       onLogin();
     } catch (err) {
       setError(err.message);
@@ -68,7 +67,6 @@ export default function LoginScreen({ onLogin, onInscription }) {
             <Text style={styles.logoEmoji}>🛡️</Text>
           </View>
           <Text style={styles.title}>Surveillance Financière</Text>
-          <Text style={styles.subtitle}>Agent d'Agence — 19 Agences</Text>
         </View>
 
         <View style={styles.form}>

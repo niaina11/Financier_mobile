@@ -11,6 +11,7 @@ import AccueilScreen from './screens/AccueilScreen';
 import OperationsScreen from './screens/OperationsScreen';
 import ApprobationsScreen from './screens/ApprobationsScreen';
 import ProfilScreen from './screens/ProfilScreen';
+import RapportScreen from './screens/RapportScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -21,6 +22,7 @@ function Sidebar({ currentTab, onNavigate, onLogout }) {
     { name: 'Opérations', emoji: '💰' },
     { name: 'Approbations', emoji: '📋' },
     { name: 'Profil', emoji: '👤' },
+    { name: 'Rapports', emoji: '📋' },
   ];
 
   return (
@@ -59,6 +61,7 @@ function MainApp({ onLogout }) {
       case 'Accueil': return <AccueilScreen />;
       case 'Opérations': return <OperationsScreen />;
       case 'Approbations': return <ApprobationsScreen />;
+      case 'Rapports': return <RapportScreen/>;
       case 'Profil': return <ProfilScreen onLogout={onLogout} />;
       default: return <AccueilScreen />;
     }

@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   SafeAreaView, ScrollView, StyleSheet, ActivityIndicator
 } from 'react-native';
+import {url} from '../utils/api';
 
 export default function InscriptionScreen({ onBack }) {
   // Liste des vraies agences récupérées depuis le backend
@@ -22,7 +23,7 @@ export default function InscriptionScreen({ onBack }) {
   useEffect(() => {
     const chargerAgences = async () => {
       try {
-        const response = await fetch('http://192.168.50.243:3000/api/auth/getAgencesPublic'); 
+        const response = await fetch(`${url}/api/auth/getAgencesPublic`); 
         const result = await response.json();
         
         if (response.ok) {
@@ -56,7 +57,7 @@ export default function InscriptionScreen({ onBack }) {
     setError(null);
 
     try {
-      const response = await fetch('http://192.168.50.243:3000/api/auth/register', {
+      const response = await fetch(`${url}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

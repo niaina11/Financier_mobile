@@ -5,6 +5,10 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { url } from '../utils/api';
 
 export default function OperationsScreen() {
   const [ops, setOps] = useState([]);
@@ -14,6 +18,7 @@ export default function OperationsScreen() {
   const [selectedOp, setSelectedOp] = useState(null);
   const [type, setType] = useState('DECAISSEMENT');
   const [montant, setMontant] = useState('');
+  const [idOperation, setIdOperation] = useState("");
   const [description, setDescription] = useState('');
   const [nomClient, setNomClient] = useState('');
   const [prenomClient, setPrenomClient] = useState('');
@@ -22,6 +27,189 @@ export default function OperationsScreen() {
   const [numero, setNumero] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [prenom, setPrenom] = useState('');
+
+  const genererFacturePDF = async () => {
+    if (!selectedOp) {
+      Alert.alert('Erreur', 'Aucune opération sélectionnée.');
+      return;
+    }
+
+    try {
+      const montantVal = Number(selectedOp.montant || 0);
+      const signe = selectedOp.type_operation === 'ENCAISSEMENT' ? '+' : '-';
+      const couleur = selectedOp.type_operation === 'ENCAISSEMENT' ? '#27ae60' : '#e74c3c';
+      const dateOperation = selectedOp.date_operation
+        ? new Date(selectedOp.date_operation).toLocaleString('fr-FR')
+        : '';
+
+      const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          padding: 40px;
+          color: #222;
+          background: white;
+        }
+        .facture {
+          border: 1px solid #ddd;
+          padding: 35px;
+        }
+        .header {
+          text-align: center;
+        }
+        .title {
+          font-size: 25px;
+          font-weight: bold;
+          color: #1f2937;
+        }
+        .subtitle {
+          font-size: 14px;
+          color: #666;
+          margin-top: 8px;
+        }
+        .divider {
+          border-top: 1px solid #ddd;
+          margin: 20px 0;
+        }
+        .reference {
+          font-size: 16px;
+          font-weight: bold;
+        }
+        .date {
+          font-size: 14px;
+          color: #666;
+          margin-top: 8px;
+        }
+        .row {
+          display: flex;
+          padding: 12px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .label {
+          width: 35%;
+          font-weight: bold;
+          color: #555;
+        }
+        .value {
+          width: 65%;
+          text-align: right;
+        }
+        .total {
+          display: flex;
+          justify-content: space-between;
+          padding: 18px;
+          background: #f5f5f5;
+          margin-top: 20px;
+        }
+        .total-label {
+          font-size: 17px;
+          font-weight: bold;
+        }
+        .total-value {
+          font-size: 22px;
+          font-weight: bold;
+          color: ${couleur};
+        }
+        .footer {
+          text-align: center;
+          margin-top: 35px;
+          font-size: 11px;
+          color: #888;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="facture">
+        <div class="header">
+          <div class="title">Surveillance Financière</div>
+          <div class="subtitle">Agence 3 — Antananarivo</div>
+        </div>
+        <div class="divider"></div>
+        <div class="reference">FACTURE N° ${selectedOp.id_operation || ''}</div>
+        <div class="date">Date : ${dateOperation}</div>
+        <div class="divider"></div>
+        <div class="row">
+          <div class="label">Type</div>
+          <div class="value">${selectedOp.type_operation || ''}</div>
+        </div>
+        <div class="row">
+          <div class="label">Description</div>
+          <div class="value">${selectedOp.description || ''}</div>
+        </div>
+        <div class="row">
+          <div class="label">Agent</div>
+          <div class="value">${prenom || ''}</div>
+        </div>
+        <div class="row">
+          <div class="label">Statut</div>
+          <div class="value">${selectedOp.statut || ''}</div>
+        </div>
+        <div class="divider"></div>
+        <div class="total">
+          <div class="total-label">MONTANT TOTAL</div>
+          <div class="total-value">${signe}${montantVal.toLocaleString('fr-FR')} Ar</div>
+        </div>
+        <div class="divider"></div>
+        <div class="footer">
+          Document généré automatiquement par le Système de Surveillance Financière
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+      // 1. Générer le PDF en demandant directement le contenu en base64
+      //    (on évite ainsi de devoir "lire" le fichier créé par Print, source du bug)
+      const { base64 } = await Print.printToFileAsync({ html, base64: true });
+
+      if (!base64) {
+        throw new Error('Le module Print n\'a pas renvoyé de contenu base64.');
+      }
+
+      // 2. Écrire ce contenu dans un fichier créé par FileSystem lui-même
+      //    (donc forcément lisible dans son propre scope)
+      const destUri = `${FileSystem.cacheDirectory}facture_${selectedOp.id_operation || Date.now()}.pdf`;
+
+      await FileSystem.writeAsStringAsync(destUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // 3. Partager ce fichier
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(destUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Partager ou enregistrer la facture PDF',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('Erreur', "Le partage n'est pas disponible sur cet appareil.");
+      }
+
+      // 4. SEULEMENT APRÈS le partage, on ferme le modal
+      setModalFacture(false);
+
+    } catch (err) {
+      console.error('Erreur génération PDF:', err);
+      Alert.alert('Erreur', "Impossible de générer ou de partager la facture PDF.");
+    }
+  };
+
+  const chargerUser = async () => {
+    try {
+      const storedPrenom = await AsyncStorage.getItem('prenom');
+      if (storedPrenom) {
+        setPrenom(storedPrenom);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du prénom de l'utilisateur :", error);
+    }
+  };
 
   const onChange = (event, selectedDate) => {
     setShow(false);
@@ -41,7 +229,7 @@ export default function OperationsScreen() {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch('http://192.168.50.243:3000/api/agence/operations', {
+      const response = await fetch(`${url}/api/agence/operations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,15 +265,42 @@ export default function OperationsScreen() {
       setIsLoading(false);
     }
   };
+  const openModif = (op) => {
+    setSelectedOp(op);
+    setIdOperation(op.id_operation);
+    setMontant(op.montant.toString());
+    setDescription(op.desc);
+    setModalModif(true);
+    console.log("Selected Operation for Modification:", op);
+  };
+  const handleModifier = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${url}/api/agence/updateOp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_operation: idOperation,
+          montant: parseInt(montant),
+          description: description
+        })
+      });
 
-  const handleModifier = () => {
-    if (!selectedOp) return;
-    setOps(ops.map(o => o.id === selectedOp.id
-      ? { ...o, montant: parseInt(montant) || o.montant, desc: description || o.desc }
-      : o
-    ));
-    setModalModif(false);
-    setSelectedOp(null);
+      const result = await response.json();
+      console.log("UPDATE RESPONSE:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erreur lors de la modification de l\'opération');
+      }
+      setModalModif(false);
+      setSelectedOp(null);
+      fetchOperations(); // Refresh the operations list after modification
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   const handleSupprimer = (op) => {
@@ -105,13 +320,6 @@ export default function OperationsScreen() {
     );
   };
 
-  const openModif = (op) => {
-    setSelectedOp(op);
-    setMontant(op.montant.toString());
-    setDescription(op.desc);
-    setModalModif(true);
-  };
-
   const openFacture = (op) => {
     setSelectedOp(op);
     setModalFacture(true);
@@ -120,7 +328,7 @@ export default function OperationsScreen() {
   const fetchOperations = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch('http://192.168.50.243:3000/api/agence/operations', {
+      const response = await fetch(`${url}/api/agence/operations`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -140,6 +348,7 @@ export default function OperationsScreen() {
   };
   useEffect(() => {
     fetchOperations();
+    chargerUser();
   }, []);
 
   return (
@@ -152,12 +361,12 @@ export default function OperationsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {
+        {/* {
           error && (
             <Text style={{ color: 'red', marginBottom: 10 }}>
               {error.Error || error.message || 'Une erreur est survenue'}
             </Text>)
-        }
+        } */}
         {ops.map((op) => (
           <View key={op.id_operation} style={styles.opCard}>
             <View style={styles.opRow}>
@@ -267,13 +476,13 @@ export default function OperationsScreen() {
             </View>
             <Text style={styles.fieldLabel}>Nouveau montant (Ar)</Text>
             <TextInput value={montant} onChangeText={setMontant} keyboardType="numeric" style={styles.textInput} />
-            <Text style={styles.fieldLabel}>Description</Text>
+            <Text style={styles.fieldLabel}>Motif de la modification</Text>
             <TextInput value={description} onChangeText={setDescription} multiline style={[styles.textInput, styles.textArea]} />
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>⚠️ Toute modification sera journalisée</Text>
             </View>
             <TouchableOpacity onPress={handleModifier} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Enregistrer la modification</Text>
+              <Text style={styles.saveBtnText}>Envoyer le demande de modification</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -296,20 +505,20 @@ export default function OperationsScreen() {
                   <Text style={styles.factureSubtitle}>Agence 3 — Antananarivo</Text>
                 </View>
                 <View style={styles.factureDivider} />
-                <Text style={styles.factureRef}>FACTURE N° {selectedOp.ref}</Text>
-                <Text style={styles.factureDate}>Date : {selectedOp.date}</Text>
+                <Text style={styles.factureRef}>FACTURE N° {selectedOp.id_operation}</Text>
+                <Text style={styles.factureDate}>Date : {selectedOp.date_operation}</Text>
                 <View style={styles.factureDivider} />
                 <View style={styles.factureRow}>
                   <Text style={styles.factureLabel}>Type</Text>
-                  <Text style={styles.factureValue}>{selectedOp.type}</Text>
+                  <Text style={styles.factureValue}>{selectedOp.type_operation}</Text>
                 </View>
                 <View style={styles.factureRow}>
                   <Text style={styles.factureLabel}>Description</Text>
-                  <Text style={styles.factureValue}>{selectedOp.desc}</Text>
+                  <Text style={styles.factureValue}>{selectedOp.description}</Text>
                 </View>
                 <View style={styles.factureRow}>
                   <Text style={styles.factureLabel}>Agent</Text>
-                  <Text style={styles.factureValue}>Pierre Rakoto</Text>
+                  <Text style={styles.factureValue}>{prenom}</Text>
                 </View>
                 <View style={styles.factureRow}>
                   <Text style={styles.factureLabel}>Statut</Text>
@@ -318,8 +527,8 @@ export default function OperationsScreen() {
                 <View style={styles.factureDivider} />
                 <View style={styles.factureTotalRow}>
                   <Text style={styles.factureTotalLabel}>MONTANT TOTAL</Text>
-                  <Text style={[styles.factureTotalValue, { color: selectedOp.type === 'Recette' ? '#27ae60' : '#e74c3c' }]}>
-                    {selectedOp.type === 'Recette' ? '+' : '-'}{selectedOp.montant.toLocaleString()} Ar
+                  <Text style={[styles.factureTotalValue, { color: selectedOp.type_operation === 'ENCAISSEMENT' ? '#27ae60' : '#e74c3c' }]}>
+                    {selectedOp.type_operation === 'ENCAISSEMENT' ? '+' : '-'}{selectedOp.montant.toLocaleString()} Ar
                   </Text>
                 </View>
                 <View style={styles.factureDivider} />
@@ -329,10 +538,12 @@ export default function OperationsScreen() {
               </View>
             )}
             <TouchableOpacity
-              onPress={() => { Alert.alert('✅ Succès', 'Facture téléchargée avec succès !'); setModalFacture(false); }}
+              onPress={genererFacturePDF}
               style={styles.saveBtn}
             >
-              <Text style={styles.saveBtnText}>📥 Télécharger la facture</Text>
+              <Text style={styles.saveBtnText}>
+                📥 Télécharger la facture
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
