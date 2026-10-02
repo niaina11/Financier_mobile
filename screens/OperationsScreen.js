@@ -9,6 +9,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { url } from '../utils/api';
+import { wp, hp, rf } from '../utils/responsive';
 
 export default function OperationsScreen() {
   const [ops, setOps] = useState([]);
@@ -163,16 +164,13 @@ export default function OperationsScreen() {
     </html>
     `;
 
-      // 1. Générer le PDF en demandant directement le contenu en base64
-      //    (on évite ainsi de devoir "lire" le fichier créé par Print, source du bug)
+
       const { base64 } = await Print.printToFileAsync({ html, base64: true });
 
       if (!base64) {
         throw new Error('Le module Print n\'a pas renvoyé de contenu base64.');
       }
 
-      // 2. Écrire ce contenu dans un fichier créé par FileSystem lui-même
-      //    (donc forcément lisible dans son propre scope)
       const destUri = `${FileSystem.cacheDirectory}facture_${selectedOp.id_operation || Date.now()}.pdf`;
 
       await FileSystem.writeAsStringAsync(destUri, base64, {
@@ -191,7 +189,6 @@ export default function OperationsScreen() {
         Alert.alert('Erreur', "Le partage n'est pas disponible sur cet appareil.");
       }
 
-      // 4. SEULEMENT APRÈS le partage, on ferme le modal
       setModalFacture(false);
 
     } catch (err) {
@@ -274,9 +271,14 @@ export default function OperationsScreen() {
     console.log("Selected Operation for Modification:", op);
   };
   const handleModifier = async () => {
+    if (!montant || !description) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch(`${url}/api/agence/updateOp`, {
+      const response = await fetch(`${url}/api/agence/demandes/modification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -284,22 +286,30 @@ export default function OperationsScreen() {
         },
         body: JSON.stringify({
           id_operation: idOperation,
-          montant: parseInt(montant),
-          description: description
+          nouveau_montant: parseInt(montant),
+          motif: description
         })
       });
 
       const result = await response.json();
-      console.log("UPDATE RESPONSE:", result);
 
       if (!response.ok) {
-        throw new Error(result.message || 'Erreur lors de la modification de l\'opération');
+        throw new Error(result.message || 'Erreur lors de l\'envoi de la demande');
       }
+
+      Alert.alert(
+        '✅ Demande envoyée',
+        'Votre demande de modification a été transmise à l\'administrateur.'
+      );
+
       setModalModif(false);
       setSelectedOp(null);
-      fetchOperations(); // Refresh the operations list after modification
-    } catch (error) {
-      setError(error.message);
+      setMontant('');
+      setDescription('');
+
+    } catch (err) {
+      setError(err.message);
+      Alert.alert('Erreur', err.message);
     }
   };
 
@@ -554,50 +564,50 @@ export default function OperationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
-  topBar: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  count: { fontSize: 13, color: '#64748b' },
-  addBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  addBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
-  scroll: { padding: 16 },
-  opCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 1 },
-  opRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  opType: { fontSize: 13, fontWeight: '700' },
-  opMontant: { fontSize: 16, fontWeight: '800' },
-  opDesc: { fontSize: 13, color: '#475569', marginBottom: 6 },
-  opRef: { fontSize: 11, color: '#94a3b8' },
-  opStatut: { fontSize: 11, fontWeight: '600' },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  actionBtn: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  topBar: { padding: wp(4), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  count: { fontSize: rf(13), color: '#64748b' },
+  addBtn: { backgroundColor: '#1a3a5c', borderRadius: wp(3), paddingHorizontal: wp(4), paddingVertical: hp(1.2) },
+  addBtnText: { color: 'white', fontWeight: '700', fontSize: rf(14) },
+  scroll: { padding: wp(4) },
+  opCard: { backgroundColor: 'white', borderRadius: wp(4), padding: wp(4), marginBottom: hp(1.5), elevation: 1 },
+  opRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(0.8) },
+  opType: { fontSize: rf(13), fontWeight: '700' },
+  opMontant: { fontSize: rf(16), fontWeight: '800' },
+  opDesc: { fontSize: rf(13), color: '#475569', marginBottom: hp(0.8) },
+  opRef: { fontSize: rf(11), color: '#94a3b8' },
+  opStatut: { fontSize: rf(11), fontWeight: '600' },
+  actionRow: { flexDirection: 'row', gap: wp(2), marginTop: hp(1.2) },
+  actionBtn: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: wp(2), paddingVertical: hp(1), alignItems: 'center' },
   actionBtnGreen: { backgroundColor: '#dcfce7' },
   actionBtnRed: { backgroundColor: '#fee2e2' },
-  actionBtnText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  actionBtnText: { fontSize: rf(12), fontWeight: '600', color: '#374151' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#1a3a5c' },
-  closeBtn: { fontSize: 22, color: '#94a3b8' },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
-  typeRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0' },
-  typeBtnText: { fontWeight: '700' },
-  textInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, marginBottom: 16 },
-  textArea: { height: 80, textAlignVertical: 'top' },
-  warningBox: { backgroundColor: '#fef3c7', borderRadius: 10, padding: 10, marginBottom: 16 },
-  warningText: { color: '#92400e', fontSize: 12 },
-  saveBtn: { backgroundColor: '#1a3a5c', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  saveBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
-  factureBox: { backgroundColor: '#f8fafc', borderRadius: 16, padding: 20, marginBottom: 16 },
-  factureHeader: { alignItems: 'center', marginBottom: 12 },
-  factureTitle: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
-  factureSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  factureDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 12 },
-  factureRef: { fontSize: 15, fontWeight: '800', color: '#1a3a5c', marginBottom: 4 },
-  factureDate: { fontSize: 12, color: '#64748b', marginBottom: 4 },
-  factureRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  factureLabel: { fontSize: 13, color: '#94a3b8' },
-  factureValue: { fontSize: 13, fontWeight: '600', color: '#1e293b', flex: 1, textAlign: 'right' },
+  modalBox: { backgroundColor: 'white', borderTopLeftRadius: wp(6), borderTopRightRadius: wp(6), padding: wp(6), maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(2.5) },
+  modalTitle: { fontSize: rf(18), fontWeight: '800', color: '#1a3a5c' },
+  closeBtn: { fontSize: rf(22), color: '#94a3b8' },
+  fieldLabel: { fontSize: rf(13), fontWeight: '600', color: '#374151', marginBottom: hp(1) },
+  typeRow: { flexDirection: 'row', gap: wp(2.5), marginBottom: hp(2) },
+  typeBtn: { flex: 1, paddingVertical: hp(1.2), borderRadius: wp(2.5), alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0' },
+  typeBtnText: { fontWeight: '700', fontSize: rf(12) },
+  textInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: wp(3), paddingHorizontal: wp(4), paddingVertical: hp(1.5), fontSize: rf(14), marginBottom: hp(2) },
+  textArea: { height: hp(10), textAlignVertical: 'top' },
+  warningBox: { backgroundColor: '#fef3c7', borderRadius: wp(2.5), padding: wp(2.5), marginBottom: hp(2) },
+  warningText: { color: '#92400e', fontSize: rf(12) },
+  saveBtn: { backgroundColor: '#1a3a5c', borderRadius: wp(3.5), paddingVertical: hp(2), alignItems: 'center' },
+  saveBtnText: { color: 'white', fontWeight: '700', fontSize: rf(15) },
+  factureBox: { backgroundColor: '#f8fafc', borderRadius: wp(4), padding: wp(5), marginBottom: hp(2) },
+  factureHeader: { alignItems: 'center', marginBottom: hp(1.5) },
+  factureTitle: { fontSize: rf(16), fontWeight: '800', color: '#1a3a5c' },
+  factureSubtitle: { fontSize: rf(12), color: '#64748b', marginTop: hp(0.3) },
+  factureDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: hp(1.5) },
+  factureRef: { fontSize: rf(15), fontWeight: '800', color: '#1a3a5c', marginBottom: hp(0.5) },
+  factureDate: { fontSize: rf(12), color: '#64748b', marginBottom: hp(0.5) },
+  factureRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(1) },
+  factureLabel: { fontSize: rf(13), color: '#94a3b8' },
+  factureValue: { fontSize: rf(13), fontWeight: '600', color: '#1e293b', flex: 1, textAlign: 'right' },
   factureTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  factureTotalLabel: { fontSize: 14, fontWeight: '800', color: '#1a3a5c' },
-  factureTotalValue: { fontSize: 20, fontWeight: '800' },
-  factureFooter: { fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4 },
+  factureTotalLabel: { fontSize: rf(14), fontWeight: '800', color: '#1a3a5c' },
+  factureTotalValue: { fontSize: rf(20), fontWeight: '800' },
+  factureFooter: { fontSize: rf(10), color: '#94a3b8', textAlign: 'center', marginTop: hp(0.5) },
 });

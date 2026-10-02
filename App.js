@@ -12,6 +12,8 @@ import OperationsScreen from './screens/OperationsScreen';
 import ApprobationsScreen from './screens/ApprobationsScreen';
 import ProfilScreen from './screens/ProfilScreen';
 import RapportScreen from './screens/RapportScreen';
+import MessagerieScreen from './screens/MessagerieScreen';
+import { hp, wp, rf } from './utils/responsive';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -23,14 +25,15 @@ function Sidebar({ currentTab, onNavigate, onLogout }) {
     { name: 'Approbations', emoji: '📋' },
     { name: 'Profil', emoji: '👤' },
     { name: 'Rapports', emoji: '📋' },
+    { name: 'Messages', emoji: '💬' }
   ];
 
   return (
     <View style={sidebarStyles.container}>
       <View style={sidebarStyles.logoBox}>
-        <Text style={sidebarStyles.logoEmoji}>🛡️</Text>
-        <Text style={sidebarStyles.logoTitle}>Surveillance</Text>
-        <Text style={sidebarStyles.logoSub}>Financière</Text>
+        <Text style={sidebarStyles.logoEmoji}>📦</Text>
+        <Text style={sidebarStyles.logoTitle}>PAOSITRA</Text>
+        <Text style={sidebarStyles.logoSub}>Surveillance Financière</Text>
       </View>
       {items.map(({ name, emoji }) => (
         <TouchableOpacity
@@ -61,15 +64,16 @@ function MainApp({ onLogout }) {
       case 'Accueil': return <AccueilScreen />;
       case 'Opérations': return <OperationsScreen />;
       case 'Approbations': return <ApprobationsScreen />;
-      case 'Rapports': return <RapportScreen/>;
+      case 'Rapports': return <RapportScreen />;
+      case 'Messages': return <MessagerieScreen />;
       case 'Profil': return <ProfilScreen onLogout={onLogout} />;
       default: return <AccueilScreen />;
     }
   };
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      {/* Sidebar */}
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#F8F9FA' }}>
+      {/* Sidebar - Identité forte Jaune & Bleu */}
       {sidebarOpen && (
         <Sidebar
           currentTab={currentTab}
@@ -80,13 +84,15 @@ function MainApp({ onLogout }) {
 
       {/* Contenu principal */}
       <View style={{ flex: 1 }}>
-        {/* Topbar */}
+        {/* Topbar Propre et Claire */}
         <View style={appStyles.topbar}>
           <TouchableOpacity onPress={() => setSidebarOpen(!sidebarOpen)} style={appStyles.menuBtn}>
             <Text style={appStyles.menuIcon}>☰</Text>
           </TouchableOpacity>
           <Text style={appStyles.topbarTitle}>{currentTab}</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity style={appStyles.messageBtn}>
+            <Text style={appStyles.messageIcon}>🔔</Text> 
+          </TouchableOpacity>
         </View>
 
         {/* Page courante */}
@@ -94,7 +100,7 @@ function MainApp({ onLogout }) {
           {renderScreen()}
         </View>
 
-        {/* Bottom Navigation */}
+        {/* Bottom Navigation aux couleurs de la marque */}
         <View style={appStyles.bottomNav}>
           {[
             { name: 'Accueil', emoji: '🏠' },
@@ -107,7 +113,7 @@ function MainApp({ onLogout }) {
               onPress={() => setCurrentTab(name)}
               style={appStyles.bottomItem}
             >
-              <Text style={appStyles.bottomEmoji}>{emoji}</Text>
+              <Text style={[appStyles.bottomEmoji, currentTab === name && appStyles.bottomEmojiActive]}>{emoji}</Text>
               <Text style={[appStyles.bottomLabel, currentTab === name && appStyles.bottomLabelActive]}>
                 {name}
               </Text>
@@ -140,52 +146,64 @@ export default function App() {
   return <MainApp onLogout={() => setScreen('login')} />;
 }
 
+// 📱 Styles de la Sidebar (Jaune Officiel Paositra)
 const sidebarStyles = StyleSheet.create({
   container: {
-    width: 220,
-    backgroundColor: '#1a3a5c',
-    paddingTop: 50,
-    paddingHorizontal: 16,
+    width: wp(58),
+    backgroundColor: '#FFD100', // Jaune Paositra Officiel
+    paddingTop: hp(6),
+    paddingHorizontal: wp(4),
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(0, 51, 160, 0.1)',
   },
-  logoBox: { alignItems: 'center', marginBottom: 32 },
-  logoEmoji: { fontSize: 36, marginBottom: 8 },
-  logoTitle: { color: 'white', fontSize: 16, fontWeight: '800' },
-  logoSub: { color: '#93c5fd', fontSize: 12 },
+  logoBox: { alignItems: 'center', marginBottom: hp(4) },
+  logoEmoji: { fontSize: rf(32), marginBottom: hp(0.5) },
+  logoTitle: { color: '#0033A0', fontSize: rf(18), fontWeight: '900', letterSpacing: 1 }, // Bleu Paositra
+  logoSub: { color: '#0033A0', fontSize: rf(11), fontWeight: '600', opacity: 0.8 },
   item: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 12,
-    borderRadius: 12, marginBottom: 4,
+    flexDirection: 'row', alignItems: 'center', gap: wp(3),
+    paddingVertical: hp(1.4), paddingHorizontal: wp(3),
+    borderRadius: wp(2.5), marginBottom: hp(0.5),
   },
-  itemActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
-  itemEmoji: { fontSize: 18 },
-  itemLabel: { color: '#93c5fd', fontSize: 14, fontWeight: '500' },
-  itemLabelActive: { color: 'white', fontWeight: '700' },
+  itemActive: { backgroundColor: '#0033A0' }, // Inversion : fond Bleu sur le lien sélectionné
+  itemEmoji: { fontSize: rf(16) },
+  itemLabel: { color: '#0033A0', fontSize: rf(14), fontWeight: '750' },
+  itemLabelActive: { color: '#FFD100', fontWeight: '900' }, // Le texte devient Jaune sur fond Bleu
   logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 12,
-    borderRadius: 12, marginTop: 'auto',
-    position: 'absolute', bottom: 40, left: 16, right: 16,
-    backgroundColor: 'rgba(220,38,38,0.2)',
+    flexDirection: 'row', alignItems: 'center', gap: wp(3),
+    paddingVertical: hp(1.4), paddingHorizontal: wp(3),
+    borderRadius: wp(2.5),
+    position: 'absolute', bottom: hp(5), left: wp(4), right: wp(4),
+    backgroundColor: 'rgba(220,38,38,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(220,38,38,0.2)',
   },
-  logoutEmoji: { fontSize: 18 },
-  logoutText: { color: '#fca5a5', fontSize: 14, fontWeight: '600' },
+  logoutEmoji: { fontSize: rf(16) },
+  logoutText: { color: '#b91c1c', fontSize: rf(14), fontWeight: '700' },
 });
 
+// 📱 Styles Généraux de l'Application (Fond Épuré / Accents Bleus)
 const appStyles = StyleSheet.create({
   topbar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1a3a5c', paddingTop: 50, paddingBottom: 14, paddingHorizontal: 16,
+    backgroundColor: 'white', paddingTop: hp(6),
+    paddingBottom: hp(1.8), paddingHorizontal: wp(5),
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3
   },
-  menuBtn: { width: 40, alignItems: 'center' },
-  menuIcon: { color: 'white', fontSize: 22 },
-  topbarTitle: { color: 'white', fontSize: 16, fontWeight: '800' },
+  menuBtn: { width: wp(10), justifyContent: 'center' },
+  messageBtn : { width: wp(10), alignItems: 'flex-end' },
+  menuIcon: { color: '#0033A0', fontSize: rf(22), fontWeight: 'bold' },
+  messageIcon: { color: '#0033A0', fontSize: rf(20) },
+  topbarTitle: { color: '#0033A0', fontSize: rf(16), fontWeight: '900', letterSpacing: 0.5 },
   bottomNav: {
     flexDirection: 'row', backgroundColor: 'white',
-    borderTopWidth: 1, borderTopColor: '#e2e8f0',
-    paddingBottom: 8, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: '#f1f5f9',
+    paddingBottom: hp(2), paddingTop: hp(1.2),
   },
-  bottomItem: { flex: 1, alignItems: 'center' },
-  bottomEmoji: { fontSize: 20 },
-  bottomLabel: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
-  bottomLabelActive: { color: '#1a3a5c', fontWeight: '700' },
+  bottomItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  bottomEmoji: { fontSize: rf(18), opacity: 0.6 },
+  bottomEmojiActive: { opacity: 1 },
+  bottomLabel: { fontSize: rf(10), color: '#94a3b8', marginTop: hp(0.4), fontWeight: '500' },
+  bottomLabelActive: { color: '#0033A0', fontWeight: '900' },
 });

@@ -7,6 +7,7 @@ import {
   SafeAreaView, StyleSheet
 } from 'react-native';
 import { url } from '../utils/api';
+import { wp, hp, rf } from '../utils/responsive';
 
 const dernieresOps = [
   { ref: 'OP-2024-018', type: 'Recette', montant: '+1 200 000 Ar', date: "Aujourd'hui 09:30", color: '#27ae60' },
@@ -134,33 +135,40 @@ export default function AccueilScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
-  scroll: { padding: 20 },
-  header: { marginBottom: 20 },
-  welcome: { fontSize: 12, color: '#94a3b8', letterSpacing: 1 },
-  name: { fontSize: 22, fontWeight: '800', color: '#1a3a5c' },
-  agence: { fontSize: 13, color: '#64748b' },
-  soldeCard: { backgroundColor: '#1a3a5c', borderRadius: 20, padding: 24, marginBottom: 20 },
-  soldeLabel: { color: '#93c5fd', fontSize: 12, marginBottom: 8 },
-  soldeValue: { color: 'white', fontSize: 32, fontWeight: '800' },
-  soldeRow: { flexDirection: 'row', marginTop: 16, gap: 20 },
-  soldeSubLabel: { color: '#93c5fd', fontSize: 11 },
-  recette: { color: '#4ade80', fontSize: 16, fontWeight: '700' },
-  depense: { color: '#f87171', fontSize: 16, fontWeight: '700' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1a3a5c', marginBottom: 12 },
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  scroll: { padding: wp(5) },
+  header: { marginBottom: hp(2.5) },
+  welcome: { fontSize: rf(12), color: '#94a3b8', letterSpacing: 1 },
+  name: { fontSize: rf(22), fontWeight: '800', color: '#1a3a5c' },
+  agence: { fontSize: rf(13), color: '#64748b' },
+  soldeCard: {
+    backgroundColor: '#1a3a5c', borderRadius: wp(5),
+    padding: wp(6), marginBottom: hp(2.5),
+  },
+  soldeLabel: { color: '#93c5fd', fontSize: rf(12), marginBottom: hp(1) },
+  soldeValue: { color: 'white', fontSize: rf(32), fontWeight: '800' },
+  soldeRow: { flexDirection: 'row', marginTop: hp(2), gap: wp(5) },
+  soldeSubLabel: { color: '#93c5fd', fontSize: rf(11) },
+  recette: { color: '#4ade80', fontSize: rf(16), fontWeight: '700' },
+  depense: { color: '#f87171', fontSize: rf(16), fontWeight: '700' },
+  sectionTitle: { fontSize: rf(15), fontWeight: '700', color: '#1a3a5c', marginBottom: hp(1.5) },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(3), marginBottom: hp(3) },
   actionCard: {
-    backgroundColor: 'white', borderRadius: 16, padding: 16,
-    width: '47%', alignItems: 'center',
+    backgroundColor: 'white', borderRadius: wp(4), padding: wp(4),
+    width: wp(42), alignItems: 'center',
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
-  actionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  actionEmoji: { fontSize: 22 },
-  actionLabel: { fontSize: 13, fontWeight: '600', color: '#374151', textAlign: 'center' },
-  opCard: {
-    backgroundColor: 'white', borderRadius: 14, padding: 14, marginBottom: 10,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  actionIcon: {
+    width: wp(11), height: wp(11), borderRadius: wp(3),
+    alignItems: 'center', justifyContent: 'center', marginBottom: hp(1),
   },
-  opType: { fontSize: 13, fontWeight: '700', color: '#1e293b' },
-  opRef: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-  opMontant: { fontSize: 15, fontWeight: '800' },
+  actionEmoji: { fontSize: rf(22) },
+  actionLabel: { fontSize: rf(12), fontWeight: '600', color: '#374151', textAlign: 'center' },
+  opCard: {
+    backgroundColor: 'white', borderRadius: wp(3.5), padding: wp(4),
+    marginBottom: hp(1.2), flexDirection: 'row',
+    justifyContent: 'space-between', alignItems: 'center',
+  },
+  opType: { fontSize: rf(13), fontWeight: '700', color: '#1e293b' },
+  opRef: { fontSize: rf(11), color: '#94a3b8', marginTop: hp(0.3) },
+  opMontant: { fontSize: rf(15), fontWeight: '800' },
 });

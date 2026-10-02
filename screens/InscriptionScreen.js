@@ -3,23 +3,24 @@ import {
   View, Text, TextInput, TouchableOpacity,
   SafeAreaView, ScrollView, StyleSheet, ActivityIndicator
 } from 'react-native';
-import {url} from '../utils/api';
+import { url } from '../utils/api';
+import { wp, hp, rf } from '../utils/responsive';
 
 export default function InscriptionScreen({ onBack }) {
-  // Liste des vraies agences récupérées depuis le backend
   const [listeAgencesBDD, setListeAgencesBDD] = useState([]);
   const [loadingAgences, setLoadingAgences] = useState(true);
 
+  // Correction de la double déclaration de la clé 'telephone'
   const [form, setForm] = useState({
-    nom: '', prenom: '', email: '',telephone: '',role:'',
-    telephone: '', id_agence: '', password: '', confirm: '',
+    nom: '', prenom: '', email: '', telephone: '', 
+    id_agence: '', password: '', confirm: '',
   });
   
   const [submitted, setSubmitted] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Charger les agences de la BDD dès l'ouverture de l'écran mobile
+  // 1. Charger les agences depuis la BDD
   useEffect(() => {
     const chargerAgences = async () => {
       try {
@@ -41,10 +42,10 @@ export default function InscriptionScreen({ onBack }) {
     chargerAgences();
   }, []);
 
-  // 2. Soumission de l'inscription avec l'ID de l'agence choisie
+  // 2. Soumission de l'inscription
   const handleSubmit = async () => {
     if (!form.nom || !form.email || !form.password || !form.id_agence) {
-      setError("Veuillez remplir tous les champs obligatoires et choisir une agence.");
+      setError("Veuillez remplir tous les champs obligatoires (*) et choisir une agence.");
       return;
     }
 
@@ -81,7 +82,6 @@ export default function InscriptionScreen({ onBack }) {
       }
 
       setSubmitted(true);
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -89,18 +89,19 @@ export default function InscriptionScreen({ onBack }) {
     }
   };
 
+  // Vue de succès après soumission
   if (submitted) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.successBox}>
-          <Text style={styles.successEmoji}>✅</Text>
-          <Text style={styles.successTitle}>Demande envoyée !</Text>
+          <Text style={styles.successEmoji}>✉️</Text>
+          <Text style={styles.successTitle}>Demande transmise !</Text>
           <Text style={styles.successText}>
-            Votre demande d'inscription a bien été transmise pour votre agence.
-            Vous pourrez vous connecter dès que l'administrateur aura validé votre compte.
+            Votre demande d'inscription a bien été affectée à votre agence.
+            Votre accès réseau sera débloqué dès validation par la Direction Générale.
           </Text>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>Retour à la connexion</Text>
+          <TouchableOpacity onPress={onBack} style={styles.successBackBtn}>
+            <Text style={styles.successBackBtnText}>Retour à la connexion</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -109,30 +110,31 @@ export default function InscriptionScreen({ onBack }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Lien de Retour en Bleu Paositra */}
         <TouchableOpacity onPress={onBack} style={styles.backLink}>
-          <Text style={styles.backLinkText}>← Retour</Text>
+          <Text style={styles.backLinkText}>← Retour à l'identification</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.title}>Créer un compte Agent</Text>
+          <Text style={styles.title}>Rejoindre le Réseau Agent</Text>
           <Text style={styles.subtitle}>
-            Sélectionnez votre agence. Votre compte sera activé après validation par l'admin.
+            Remplissez vos informations professionnelles pour demander votre accès au système de surveillance.
           </Text>
         </View>
 
         <View style={styles.form}>
           {error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>⚠️ {error}</Text>
             </View>
           )}
 
           {[
             { key: 'nom', label: 'Nom *', placeholder: 'Rakoto' },
             { key: 'prenom', label: 'Prénom', placeholder: 'Pierre' },
-            { key: 'email', label: 'Email *', placeholder: 'pierre@agence.mg', type: 'email-address' },
-            { key: 'telephone', label: 'Téléphone', placeholder: '034 00 000 00', type: 'phone-pad' },
+            { key: 'email', label: 'Email Professionnel *', placeholder: 'pierre.r@paositra.mg', type: 'email-address' },
+            { key: 'telephone', label: 'Téléphone Agent', placeholder: '034 00 000 00', type: 'phone-pad' },
           ].map(({ key, label, placeholder, type }) => (
             <View key={key} style={styles.inputGroup}>
               <Text style={styles.label}>{label}</Text>
@@ -140,6 +142,7 @@ export default function InscriptionScreen({ onBack }) {
                 value={form[key]}
                 onChangeText={(v) => setForm({ ...form, [key]: v })}
                 placeholder={placeholder}
+                placeholderTextColor="#9ca3af"
                 keyboardType={type || 'default'}
                 autoCapitalize={key === 'email' ? 'none' : 'words'}
                 style={styles.input}
@@ -147,11 +150,11 @@ export default function InscriptionScreen({ onBack }) {
             </View>
           ))}
 
-          {/* Sélection de la vraie agence issue de la BDD */}
+          {/* Grille de sélection d'agence aux couleurs de la marque */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Sélectionnez votre Agence *</Text>
+            <Text style={styles.label}>Sélectionnez votre Bureau de Poste *</Text>
             {loadingAgences ? (
-              <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 10 }} />
+              <ActivityIndicator color="#0033A0" style={{ marginVertical: hp(2) }} />
             ) : (
               <View style={styles.agenceGrid}>
                 {listeAgencesBDD.map((agence) => (
@@ -181,6 +184,7 @@ export default function InscriptionScreen({ onBack }) {
               value={form.password}
               onChangeText={(v) => setForm({ ...form, password: v })}
               placeholder="••••••••"
+              placeholderTextColor="#9ca3af"
               secureTextEntry
               style={styles.input}
             />
@@ -192,20 +196,22 @@ export default function InscriptionScreen({ onBack }) {
               value={form.confirm}
               onChangeText={(v) => setForm({ ...form, confirm: v })}
               placeholder="••••••••"
+              placeholderTextColor="#9ca3af"
               secureTextEntry
               style={styles.input}
             />
           </View>
 
+          {/* Bouton de soumission Jaune Paositra */}
           <TouchableOpacity 
             onPress={handleSubmit} 
             disabled={loadingSubmit} 
             style={[styles.submitBtn, loadingSubmit && styles.submitBtnDisabled]}
           >
             {loadingSubmit ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#0033A0" />
             ) : (
-              <Text style={styles.submitBtnText}>Envoyer la demande d'inscription</Text>
+              <Text style={styles.submitBtnText}>Envoyer ma demande</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -214,40 +220,51 @@ export default function InscriptionScreen({ onBack }) {
   );
 }
 
+// 📱 Styles Mobile aux Normes Paositra Malagasy
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  scroll: { padding: 20 },
-  backLink: { marginBottom: 16 },
-  backLinkText: { color: '#1a3a5c', fontWeight: '600', fontSize: 14 },
-  header: { marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '800', color: '#1a3a5c' },
-  subtitle: { color: '#64748b', fontSize: 13, marginTop: 4 },
-  form: { backgroundColor: 'white', borderRadius: 20, padding: 20 },
-  errorBox: {
-    backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5',
-    borderRadius: 12, padding: 12, marginBottom: 16,
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  scroll: { padding: wp(5) },
+  backLink: { marginBottom: hp(2) },
+  backLinkText: { color: '#0033A0', fontWeight: '800', fontSize: rf(13) },
+  header: { marginBottom: hp(2.5) },
+  title: { fontSize: rf(21), fontWeight: '900', color: '#0033A0', letterSpacing: 0.5 },
+  subtitle: { color: '#4b5563', fontSize: rf(13), marginTop: hp(0.5), fontWeight: '500', leadingLine: hp(2) },
+  
+  form: { 
+    backgroundColor: 'white', 
+    borderRadius: wp(5), 
+    padding: wp(5),
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10, elevation: 1
   },
-  errorText: { color: '#991b1b', fontSize: 13, fontWeight: '600' },
-  inputGroup: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  inputGroup: { marginBottom: hp(2) },
+  label: { fontSize: rf(12), fontWeight: '800', color: '#1f2937', uppercase: true, marginBottom: hp(0.6) },
   input: {
-    borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: '#374151'
+    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: wp(3),
+    paddingHorizontal: wp(4), paddingVertical: hp(1.4), fontSize: rf(14), color: '#1f2937',
+    backgroundColor: '#f9fafb', fontWeight: '500'
   },
-  agenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  
+  // Design des boutons de sélection d'agence (Inversion de marque)
+  agenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(2), marginTop: hp(0.5) },
   agenceBtn: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
-    borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc',
+    backgroundColor: '#f3f4f6', paddingHorizontal: wp(3), paddingVertical: hp(1.2),
+    borderRadius: wp(2.5), borderWidth: 1, borderColor: '#e5e7eb'
   },
-  agenceBtnActive: { backgroundColor: '#dbeafe', borderColor: '#1a3a5c' },
-  agenceBtnText: { fontSize: 13, color: '#64748b', fontWeight: '500' },
-  agenceBtnTextActive: { color: '#1a3a5c', fontWeight: '700' },
+  agenceBtnActive: { backgroundColor: '#0033A0', borderColor: '#0033A0' },
+  agenceBtnText: { color: '#4b5563', fontWeight: '700', fontSize: rf(12) },
+  agenceBtnTextActive: { color: '#FFD100', fontWeight: '900' },
+
+  // Bouton de Validation Principal Jaune
   submitBtn: {
-    backgroundColor: '#1a3a5c', borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center', marginTop: 8,
+    backgroundColor: '#FFD100', borderRadius: wp(3), paddingVertical: hp(1.8),
+    alignItems: 'center', marginTop: hp(1), shadowColor: '#FFD100', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 2
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  submitBtnText: { color: '#0033A0', fontWeight: '900', fontSize: rf(14), textTransform: 'uppercase' },
+
+
   successBox: {
     flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32,
   },

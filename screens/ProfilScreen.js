@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { wp, hp, rf } from '../utils/responsive';
 
 const menuItems = [
   { label: 'Notifications', emoji: '🔔' },
@@ -98,24 +99,37 @@ export default function ProfilScreen({onLogout}) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
-  scroll: { padding: 20 },
-  pageTitle: { fontSize: 20, fontWeight: '800', color: '#1a3a5c', marginBottom: 20 },
-  profileCard: { backgroundColor: 'white', borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 20, elevation: 2 },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  avatarEmoji: { fontSize: 36 },
-  profileName: { fontSize: 18, fontWeight: '800', color: '#1a3a5c' },
-  profileRole: { color: '#64748b', fontSize: 13, marginTop: 2 },
-  profileAgence: { color: '#2980b9', fontSize: 13, fontWeight: '600', marginTop: 8 },
-  infoCard: { backgroundColor: 'white', borderRadius: 20, padding: 20, marginBottom: 20 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  infoLabel: { fontSize: 13, color: '#94a3b8' },
-  infoValue: { fontSize: 13, fontWeight: '600', color: '#1e293b' },
-  menuCard: { backgroundColor: 'white', borderRadius: 20, overflow: 'hidden', marginBottom: 20 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  scroll: { padding: wp(5) },
+  pageTitle: { fontSize: rf(20), fontWeight: '800', color: '#1a3a5c', marginBottom: hp(2.5) },
+  profileCard: {
+    backgroundColor: 'white', borderRadius: wp(5), padding: wp(5),
+    alignItems: 'center', marginBottom: hp(2.5), elevation: 2,
+  },
+  avatar: {
+    width: wp(18), height: wp(18), borderRadius: wp(9),
+    backgroundColor: '#dbeafe', alignItems: 'center',
+    justifyContent: 'center', marginBottom: hp(1.5),
+  },
+  avatarEmoji: { fontSize: rf(36) },
+  profileName: { fontSize: rf(18), fontWeight: '800', color: '#1a3a5c' },
+  profileRole: { color: '#64748b', fontSize: rf(13), marginTop: hp(0.3) },
+  profileAgence: { color: '#2980b9', fontSize: rf(13), fontWeight: '600', marginTop: hp(1) },
+  infoCard: { backgroundColor: 'white', borderRadius: wp(5), padding: wp(5), marginBottom: hp(2.5) },
+  infoRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: hp(1.2), borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  infoLabel: { fontSize: rf(13), color: '#94a3b8' },
+  infoValue: { fontSize: rf(13), fontWeight: '600', color: '#1e293b' },
+  menuCard: { backgroundColor: 'white', borderRadius: wp(5), overflow: 'hidden', marginBottom: hp(2.5) },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: wp(3.5), padding: wp(4) },
   menuBorder: { borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  menuEmoji: { fontSize: 20 },
-  menuLabel: { fontSize: 14, color: '#1e293b', fontWeight: '500' },
-  logoutBtn: { backgroundColor: '#fee2e2', borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  logoutEmoji: { fontSize: 20 },
-  logoutText: { color: '#dc2626', fontWeight: '700', fontSize: 15 },
+  menuEmoji: { fontSize: rf(20) },
+  menuLabel: { fontSize: rf(14), color: '#1e293b', fontWeight: '500' },
+  logoutBtn: {
+    backgroundColor: '#fee2e2', borderRadius: wp(3.5), padding: wp(4),
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: wp(2.5),
+  },
+  logoutEmoji: { fontSize: rf(20) },
+  logoutText: { color: '#dc2626', fontWeight: '700', fontSize: rf(15) },
 });
